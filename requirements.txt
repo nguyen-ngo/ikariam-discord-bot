@@ -1,0 +1,4 @@
+# python module requiments
+discord.py
+jsons
+requests
