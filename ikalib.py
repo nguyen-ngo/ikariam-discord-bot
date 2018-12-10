@@ -1,93 +1,119 @@
+import re
+import json
 import requests
 
-url_base = "http://ika-search.com/getSite.py"
-iso = "us"
-server = "Eirene"
+f = open("island.json","r")
+island_data = json.loads(f.read())
+f.close()
+
+islands = island_data["islands"]
+
+url_base = 'http://ika-search.com/getSite.py'
+region = 'us'
+server = 'Eirene'
+
+
+def getNews():
+    pass
 
 
 def getPlayerData():
-    params = {"action": "autocompleteList",
-              "iso": iso,
-              "server": server
+    params = {'action': 'autocompleteList',
+              'iso': region,
+              'server': server
               }
-    rq1 = requests.post(url_base, params)
-    server_data = rq1.json()
-    player_data = server_data["player"]
+    rq = requests.post(url_base, params)
+    server_data = rq.json()
+    player_data = server_data['player']
     return player_data
 
 
 def getAllyData():
-    params = {"action": "autocompleteList",
-              "iso": iso,
-              "server": server
+    params = {'action': 'autocompleteList',
+              'iso': region,
+              'server': server
               }
-    rq1 = requests.post(url_base, params)
-    server_data = rq1.json()
-    ally_data = server_data["ally"]
+    rq = requests.post(url_base, params)
+    server_data = rq.json()
+    ally_data = server_data['ally']
     return ally_data
 
 
 def getPlayerId(playername):
-    params = {"action": "autocompleteList",
-              "iso": iso,
-              "server": server
-              }
-    rq1 = requests.post(url_base, params)
-    server_data = rq1.json()
-    player_data = server_data["player"]
+    player_data = getPlayerData()
 
     for player in player_data:
-        if playername in player["pseudo"]:
-            return player["id"]
+        if re.match(r"^"+playername+"$", player['pseudo']):
+            return player['id']
     return 0
 
 
-def getPlayerInfo(playerId):
+def getPlayerTown(playerId):
     params = {"action": "playerInfo",
-              "iso": iso,
+              "iso": region,
               "server": server,
               "playerId": playerId
               }
 
-    rq2 = requests.post(url_base, params)
+    rq = requests.post(url_base, params)
 
-    player_data = rq2.json()
+    player_data = rq.json()
 
+    player_tag = player_data["player"]["tag"]
     town_data = player_data["cities"]
 
-    player_towns = []
+    player_towns = [player_tag]
     for town in town_data:
         player_towns.append({"coord": "[" + str(town["x"]) + ":" + str(town["y"]) + "]", "name": town["name"], "level": town["level"], "resource_id": town["resource_id"], "wonder_id": town["wonder_id"]})
     return player_towns
 
 
-def getAllyId(allytag):
-    params = {"action": "autocompleteList",
-              "iso": iso,
-              "server": server
+def getPlayerInfo(playerId):
+    params = {"action": "playerInfo",
+              "iso": region,
+              "server": server,
+              "playerId": playerId
               }
-    rq1 = requests.post(url_base, params)
-    server_data = rq1.json()
-    ally_data = server_data["ally"]
 
-    for ally in ally_data:
-        if allytag in ally["tag"]:
-            return ally["id"]
-        return 0
+    rq = requests.post(url_base, params)
+
+    player_data = rq.json()
+    return player_data
 
 
-def getAllyInfo(allytag):
-    allyId = getAllyId(allytag)
+def getIslandId(x, y):
+    for island in islands:
+        if x in island["x"] and y in island["y"]:
+            return int(island["id"])
+    return 0
+
+
+def getIslandInfo(islandId):
+    params = {"action": "islandCities",
+              "iso": region,
+              "server": server,
+              "islandId": islandId
+              }
+    rq = requests.post(url_base, params)
+    island_data = rq.json()
+    return island_data
+
+
+def getAllyId(allyname):
+    alliances = getAllyData()
+    for alliance in alliances:
+        if re.match(r"^"+allyname+"$", alliance["tag"]) or re.match(r"^"+allyname+"$", alliance["name"]):
+            return alliance["id"]
+    return 0
+
+
+def getAllyInfo(allyId):
     params = {"action": "allyInfo",
-              "iso": iso,
+              "iso": region,
               "server": server,
               "allyId": allyId
               }
-    rq1 = requests.post(url_base, params)
-    player_data = rq1.json()
-    member_data = player_data["members"]
+    rq = requests.post(url_base, params)
 
-    member_list = []
-    for member in member_data:
-        member_list.append({"name": member["pseudo"], "state": member["state"], "score": member["score"], "army_score": member["army_score_main"]})
-    return member_list
+    ally_data = rq.json()
+    return ally_data
